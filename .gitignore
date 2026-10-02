@@ -1,0 +1,22 @@
+# Rust
+/netting-engine/target/
+**/*.rs.bk
+
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.properties
+.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+
+# IDEs / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Local env and run artefacts
+.env
+*.local
+results/raw/
