@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.github.eunini.clearing</groupId>
+    <artifactId>cross-border-clearing-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>iso20022-model</artifactId>
+  <name>iso20022-model</name>
+  <description>JAXB bindings generated from the official ISO 20022 XSDs (pacs.008.001.08, pacs.002.001.10, camt.053.001.08)</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jvnet.jaxb</groupId>
+        <artifactId>jaxb-maven-plugin</artifactId>
+        <version>${jaxb-maven-plugin.version}</version>
+        <configuration>
+          <schemaDirectory>src/main/resources/iso20022/xsd</schemaDirectory>
+          <noFileHeader>true</noFileHeader>
+          <episode>false</episode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>pacs008</id>
+            <goals><goal>generate</goal></goals>
+            <configuration>
+              <schemaIncludes><include>pacs.008.001.08.xsd</include></schemaIncludes>
+              <generatePackage>io.github.eunini.clearing.iso.pacs008</generatePackage>
+              <generateDirectory>${project.build.directory}/generated-sources/xjc-pacs008</generateDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>pacs002</id>
+            <goals><goal>generate</goal></goals>
+            <configuration>
+              <schemaIncludes><include>pacs.002.001.10.xsd</include></schemaIncludes>
+              <generatePackage>io.github.eunini.clearing.iso.pacs002</generatePackage>
+              <generateDirectory>${project.build.directory}/generated-sources/xjc-pacs002</generateDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>camt053</id>
+            <goals><goal>generate</goal></goals>
+            <configuration>
+              <schemaIncludes><include>camt.053.001.08.xsd</include></schemaIncludes>
+              <generatePackage>io.github.eunini.clearing.iso.camt053</generatePackage>
+              <generateDirectory>${project.build.directory}/generated-sources/xjc-camt053</generateDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
