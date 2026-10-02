@@ -1,0 +1,49 @@
+# Whole stack: PostgreSQL, Rust netting engine, Java gateway (dashboard on http://localhost:8080).
+# Optional synthetic traffic:  docker compose --profile load run --rm loadgen --payments=20000
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: clearing
+      POSTGRES_USER: clearing
+      POSTGRES_PASSWORD: clearing
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=512MB"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clearing -d clearing"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  engine:
+    build: ./netting-engine
+    environment:
+      BIND_ADDR: 0.0.0.0:7070
+    ports:
+      - "127.0.0.1:7070:7070"
+
+  gateway:
+    build:
+      context: .
+      target: gateway
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/clearing?reWriteBatchedInserts=true
+      DB_USER: clearing
+      DB_PASSWORD: clearing
+      ENGINE_URL: http://engine:7070
+      CYCLE_INTERVAL: ${CYCLE_INTERVAL:-60s}
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  loadgen:
+    profiles: ["load"]
+    build:
+      context: .
+      target: loadgen
+    depends_on:
+      - gateway
+    command: ["--url=http://gateway:8080", "--payments=20000", "--concurrency=64", "--cycles=4"]
