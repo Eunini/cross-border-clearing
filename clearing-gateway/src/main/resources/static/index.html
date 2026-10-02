@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cross-border-clearing - operations dashboard</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-0: #f4f3f0; --surface-1: #fcfcfb; --border: #e2e1dc;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #77766f;
+    --grid: #ebeae6; --series-1: #2a78d6; --series-2: #eb6834;
+    --good: #008300; --warn: #c98500; --critical: #d03a3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      color-scheme: dark;
+      --surface-0: #111110; --surface-1: #1a1a19; --border: #2f2f2c;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #9a998f;
+      --grid: #2a2a27; --series-1: #3987e5; --series-2: #d95926;
+      --good: #2f9e2f; --warn: #c98500; --critical: #e66767;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .viz-root { background: var(--surface-0); color: var(--text-primary); min-height: 100vh; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .sub { color: var(--text-secondary); margin: 0 0 20px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .note { color: var(--text-muted); font-size: 12px; }
+  .row { display: grid; gap: 16px; grid-template-columns: 2fr 1fr; margin-bottom: 16px; }
+  @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-secondary); font-weight: 500; font-size: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: 260px; }
+  .axis text { fill: var(--text-muted); font-size: 11px; }
+  .tooltip { position: absolute; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none; min-width: 180px; }
+  .meter { height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; min-width: 80px; }
+  .meter > span { display: block; height: 100%; border-radius: 3px; }
+  details summary { cursor: pointer; color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+  .status { font-size: 12px; color: var(--text-secondary); }
+  .scroll { max-height: 420px; overflow: auto; }
+  .empty { color: var(--text-muted); padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <h1>cross-border-clearing</h1>
+  <p class="sub">Simulated clearing network: fictional participants, simulated FX rates. Values in <span id="ccy">USD</span>. Refreshes every 5 s.</p>
+
+  <div class="grid" id="tiles"></div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Gross vs net settlement value per cycle</h2>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--series-1)"></span>Gross (payment by payment)</span>
+        <span><span class="swatch" style="background:var(--series-2)"></span>Net (after multilateral netting)</span>
+      </div>
+      <div class="chart" id="cycleChart"><svg role="img" aria-label="Gross versus net settlement value per cycle"></svg><div class="tooltip"></div></div>
+      <details><summary>Table view</summary><div class="scroll"><table id="cycleTable"></table></div></details>
+    </div>
+    <div class="card">
+      <h2>Per-currency positions <span class="status" id="ccyCycle"></span></h2>
+      <div class="scroll"><table id="ccyTable"></table></div>
+      <p class="note">Gross: instructed value in that currency (major units). Net: sum of positive per-participant nets in that currency.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Participants: unsettled position against net debit cap</h2>
+    <div class="scroll"><table id="ptTable"></table></div>
+  </div>
+</div>
+
+<script>
+const fmt = (minor) => (minor / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const fmtN = (n) => Number(n).toLocaleString();
+const saved = (part, whole) => whole > 0 ? (100 * (1 - part / whole)).toFixed(1) + '%' : '-';
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+function tile(label, value, note) {
+  return `<div class="card tile"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="note">${esc(note || '')}</div></div>`;
+}
+
+function renderTiles(d) {
+  const t = d.totals, l = d.live, lsm = d.lsm;
+  document.getElementById('tiles').innerHTML = [
+    tile('Payments netted', fmtN(t.payments), `${fmtN(t.cycles)} cycles`),
+    tile('Gross settlement value', fmt(t.gross), 'if settled payment by payment'),
+    tile('Net settlement value', fmt(t.net), 'after multilateral netting'),
+    tile('Liquidity saved', saved(t.net, t.gross), '1 - net / gross'),
+    tile('Settlement transfers', fmtN(t.transfers), `${saved(t.transfers, t.payments)} fewer than payments`),
+    tile('Released by LSM', fmtN(lsm.released), `${fmtN(lsm.released_by_offsetting)} needed offsetting`),
+    tile('Open cycle', fmtN(l.open_cycle_payments), `${fmt(l.open_cycle_value)} accepted, ${fmtN(l.queued)} queued`),
+    tile('Accepted, last 60 s', fmtN(l.accepted_last_60s), `${(l.accepted_last_60s / 60).toFixed(0)}/s; ${fmtN(l.rejected_total)} rejected in total`),
+  ].join('');
+}
+
+function renderCycleChart(cycles) {
+  const data = cycles.filter(c => c.paymentCount > 0).reverse();
+  const host = document.getElementById('cycleChart');
+  const svg = host.querySelector('svg'), tip = host.querySelector('.tooltip');
+  const W = host.clientWidth || 600, H = 260, m = { l: 72, r: 8, t: 8, b: 28 };
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  tip.style.display = 'none';
+  if (!data.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--text-muted)">No netted cycles yet</text>`;
+    return;
+  }
+  const max = Math.max(...data.map(c => c.grossValue)) || 1;
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, band = iw / data.length;
+  const bw = Math.max(2, Math.min(28, (band - 8) / 2));
+  const y = v => m.t + ih - (v / max) * ih;
+  let out = '<g class="axis">';
+  for (let i = 0; i <= 4; i++) {
+    const v = max * i / 4, yy = y(v);
+    out += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="var(--grid)"/>`;
+    out += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  out += '</g>';
+  const bar = (x, v, color) => {
+    const top = y(v), h = m.t + ih - top, r = Math.min(4, h, bw / 2);
+    if (h <= 0) return '';
+    return `<path d="M${x},${m.t + ih} V${top + r} Q${x},${top} ${x + r},${top} H${x + bw - r} Q${x + bw},${top} ${x + bw},${top + r} V${m.t + ih} Z" fill="${color}"/>`;
+  };
+  data.forEach((c, i) => {
+    const x0 = m.l + i * band + (band - (2 * bw + 2)) / 2;
+    out += bar(x0, c.grossValue, 'var(--series-1)') + bar(x0 + bw + 2, c.netValue, 'var(--series-2)');
+    if (data.length <= 20) {
+      out += `<text x="${m.l + i * band + band / 2}" y="${H - 8}" text-anchor="middle" fill="var(--text-muted)" font-size="11">#${c.id}</text>`;
+    }
+    out += `<rect x="${m.l + i * band}" y="${m.t}" width="${band}" height="${ih}" fill="transparent" data-i="${i}"/>`;
+  });
+  svg.innerHTML = out;
+  svg.querySelectorAll('rect[data-i]').forEach(r => {
+    r.addEventListener('mousemove', ev => {
+      const c = data[+r.dataset.i];
+      tip.innerHTML = `<b>Cycle #${c.id}</b> (${esc(c.status)})<br>${fmtN(c.paymentCount)} payments<br>
+        <span class="swatch" style="background:var(--series-1)"></span>Gross ${fmt(c.grossValue)}<br>
+        <span class="swatch" style="background:var(--series-2)"></span>Net ${fmt(c.netValue)}<br>
+        Liquidity saved ${c.liquiditySavingPct}%<br>${fmtN(c.transferCount)} transfers (${esc(c.planMethod)})`;
+      const box = host.getBoundingClientRect();
+      tip.style.display = 'block';
+      tip.style.left = Math.min(ev.clientX - box.left + 12, box.width - 200) + 'px';
+      tip.style.top = (ev.clientY - box.top + 12) + 'px';
+    });
+    r.addEventListener('mouseleave', () => tip.style.display = 'none');
+  });
+  document.getElementById('cycleTable').innerHTML =
+    '<tr><th>Cycle</th><th>Status</th><th>Payments</th><th>Gross</th><th>Net</th><th>Saved</th><th>Transfers</th><th>Engine ms</th></tr>' +
+    data.slice().reverse().map(c => `<tr><td>#${c.id}</td><td>${esc(c.status)}</td><td>${fmtN(c.paymentCount)}</td>
+      <td>${fmt(c.grossValue)}</td><td>${fmt(c.netValue)}</td><td>${c.liquiditySavingPct}%</td><td>${fmtN(c.transferCount)}</td>
+      <td>${c.nettingMicros == null ? '-' : (c.nettingMicros / 1000).toFixed(1)}</td></tr>`).join('');
+}
+
+function renderCurrencies(d) {
+  document.getElementById('ccyCycle').textContent = d.currencyCycleId ? `(cycle #${d.currencyCycleId})` : '';
+  const rows = d.currencies;
+  const el = document.getElementById('ccyTable');
+  if (!rows.length) { el.innerHTML = '<tr><td class="empty">No netted cycles yet</td></tr>'; return; }
+  const major = (ccy, v) => fmtN(ccy === 'JPY' ? v : Math.round(v / 100));
+  el.innerHTML = '<tr><th>Currency</th><th>Gross</th><th>Net</th><th>Net / gross</th></tr>' +
+    rows.map(r => `<tr><td>${esc(r.currency)}</td><td>${major(r.currency, r.gross)}</td><td>${major(r.currency, r.net)}</td>
+      <td>${r.gross ? (100 * r.net / r.gross).toFixed(1) + '%' : '-'}</td></tr>`).join('');
+}
+
+function renderParticipants(d) {
+  document.getElementById('ptTable').innerHTML =
+    '<tr><th>BIC</th><th>Country</th><th>Ccy</th><th>Position</th><th>Cap</th><th>Cap used</th><th></th><th>Queued</th></tr>' +
+    d.participants.map(p => {
+      const used = p.cap > 0 ? Math.max(0, -p.position) / p.cap : (p.position < 0 ? 1 : 0);
+      const color = used >= 0.9 ? 'var(--critical)' : used >= 0.7 ? 'var(--warn)' : 'var(--good)';
+      const label = used >= 0.9 ? 'near cap' : used >= 0.7 ? 'high' : 'ok';
+      return `<tr><td>${esc(p.bic)}</td><td>${esc(p.country)}</td><td>${esc(p.currency)}</td><td>${fmt(p.position)}</td><td>${fmt(p.cap)}</td>
+        <td>${(100 * used).toFixed(0)}% <span class="status">${label}</span></td>
+        <td><div class="meter" title="${(100 * used).toFixed(1)}% of cap"><span style="width:${Math.min(100, 100 * used)}%;background:${color}"></span></div></td>
+        <td>${fmtN(p.queued)}</td></tr>`;
+    }).join('');
+}
+
+let last = null;
+async function refresh() {
+  try {
+    const d = await (await fetch('api/dashboard')).json();
+    last = d;
+    document.getElementById('ccy').textContent = d.settlementCurrency;
+    renderTiles(d); renderCycleChart(d.cycles); renderCurrencies(d); renderParticipants(d);
+  } catch (e) { console.error(e); }
+}
+window.addEventListener('resize', () => last && renderCycleChart(last.cycles));
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
