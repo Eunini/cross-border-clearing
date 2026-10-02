@@ -11,19 +11,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Pre-settlement risk check against net debit caps.
+ * Locking primitives for the pre-settlement risk check against net debit caps.
  *
  * <p>Each participant has one position row holding its unsettled net position
- * (all accepted, not yet settled payments). Accepting a payment locks the
- * debtor and creditor rows (always in ascending id order, so concurrent
- * payments cannot deadlock on each other), checks that the debtor stays at or
- * above {@code -netDebitCap}, and moves the amount. Because settlement is
- * guaranteed once the position is reserved, the creditor's position can
- * immediately be used to fund its own outgoing payments.
- *
- * <p>A payment that does not fit - or whose debtor already has queued
- * payments (FIFO) - is queued for the liquidity-saving mechanism instead of
- * being rejected outright.
+ * (all accepted, not yet settled payments). Every writer takes locks in the
+ * same global order - the open cycle row (FOR SHARE) first, then position rows
+ * in ascending participant id - so the payment sequencer, the LSM, settlement
+ * and cut-off cannot deadlock with each other. The decision logic itself lives
+ * in {@link PositionBook}.
  */
 @Service
 public class RiskService {
@@ -78,29 +73,6 @@ public class RiskService {
                 .query((rs, n) -> new PositionRow(rs.getInt(1), rs.getLong(2), rs.getInt(3), rs.getLong(4)))
                 .list().stream()
                 .collect(Collectors.toMap(PositionRow::participantId, Function.identity()));
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY)
-    public RiskDecision reserve(int debtorId, int creditorId, long settlementAmount) {
-        long cycleId = lockOpenCycle();
-        Map<Integer, PositionRow> rows = lockPositions(List.of(debtorId, creditorId));
-        PositionRow debtor = rows.get(debtorId);
-        if (debtor.queuedCount() > 0) {
-            incrementQueued(debtorId, 1);
-            return RiskDecision.queue("FIFO: debtor agent has " + debtor.queuedCount() + " queued payment(s)");
-        }
-        if (debtor.position() - settlementAmount < debtor.floor()) {
-            incrementQueued(debtorId, 1);
-            return RiskDecision.queue("Net debit cap would be exceeded (position " + debtor.position()
-                    + ", amount " + settlementAmount + ", cap " + debtor.netDebitCap() + ")");
-        }
-        jdbc.sql("""
-                        update participant_position
-                        set position = position + case when participant_id = :d then -:amt else :amt end,
-                            updated_at = now()
-                        where participant_id in (:d, :c)""")
-                .param("d", debtorId).param("c", creditorId).param("amt", settlementAmount).update();
-        return RiskDecision.accept(cycleId);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

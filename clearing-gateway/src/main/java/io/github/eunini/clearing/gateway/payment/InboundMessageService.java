@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -27,8 +28,8 @@ import org.springframework.stereotype.Service;
  * a response), a retransmission is re-processed and the per-transaction UETR
  * idempotency makes already-processed transactions replay their outcome.
  *
- * <p>Transactions inside a message are processed in order, each in its own
- * database transaction, which keeps a debtor agent's payments in FIFO order.
+ * <p>Transactions inside a message are submitted to the payment sequencer in
+ * order, which keeps a debtor agent's payments in FIFO order.
  */
 @Service
 public class InboundMessageService {
@@ -95,10 +96,12 @@ public class InboundMessageService {
             messageId = (Long) existing[0];
         }
 
-        List<TxOutcome> outcomes = new ArrayList<>(group.transactions().size());
+        // Submitted in order, so the sequencer sees a message's transactions in FIFO order.
+        List<CompletableFuture<TxOutcome>> futures = new ArrayList<>(group.transactions().size());
         for (CreditTransfer t : group.transactions()) {
-            outcomes.add(processor.process(t, messageId));
+            futures.add(processor.submit(t, messageId));
         }
+        List<TxOutcome> outcomes = futures.stream().map(CompletableFuture::join).toList();
         String response = codec.writePacs002(Pacs002Builder.transactions(group.msgId(), group.creationDateTime(),
                 outcomes, clock.instant()));
         jdbc.sql("update inbound_message set response_xml = :r where id = :id")

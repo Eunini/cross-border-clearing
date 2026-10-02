@@ -1,7 +1,5 @@
 package io.github.eunini.clearing.gateway.payment;
 
-import io.github.eunini.clearing.gateway.fx.FxQuote;
-import io.github.eunini.clearing.gateway.iso.CreditTransfer;
 import io.github.eunini.clearing.gateway.iso.Rejection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,41 +23,6 @@ public class PaymentRepository {
         this.template = template;
     }
 
-    /**
-     * Claims the UETR. Returns the new payment id, or empty if a payment with
-     * this UETR already exists (the caller then performs an idempotent replay).
-     * Concurrent claims of the same UETR serialise on the unique index: the
-     * loser waits for the winner to commit and then sees the conflict.
-     */
-    public Optional<Long> insertReceived(UUID uetr, Long messageId, String txSha256, CreditTransfer tx,
-                                         Integer debtorId, Integer creditorId, long amountMinor) {
-        return jdbc.sql("""
-                        insert into payment (uetr, message_id, tx_sha256, end_to_end_id, tx_id, instr_id,
-                            debtor_agent, creditor_agent, debtor_participant, creditor_participant,
-                            debtor_name, debtor_account, creditor_name, creditor_account,
-                            currency, amount, state)
-                        values (:uetr, :msg, :sha, :e2e, :txId, :instrId, :dAgent, :cAgent, :dId, :cId,
-                            :dName, :dAcct, :cName, :cAcct, :ccy, :amount, 'RECEIVED')
-                        on conflict (uetr) do nothing
-                        returning id""")
-                .param("uetr", uetr).param("msg", messageId).param("sha", txSha256)
-                .param("e2e", tx.endToEndId()).param("txId", tx.txId()).param("instrId", tx.instrId())
-                .param("dAgent", nz(tx.debtorAgent())).param("cAgent", nz(tx.creditorAgent()))
-                .param("dId", debtorId).param("cId", creditorId)
-                .param("dName", tx.debtorName()).param("dAcct", truncate(tx.debtorAccount().value(), 34))
-                .param("cName", tx.creditorName()).param("cAcct", truncate(tx.creditorAccount().value(), 34))
-                .param("ccy", tx.currency()).param("amount", amountMinor)
-                .query(Long.class).optional();
-    }
-
-    private static String nz(String s) {
-        return s == null ? "UNKNOWN" : s;
-    }
-
-    private static String truncate(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
-    }
-
     public Optional<StoredPayment> findByUetr(UUID uetr) {
         return jdbc.sql("select * from payment where uetr = :uetr").param("uetr", uetr)
                 .query(PaymentRepository::map).optional();
@@ -71,37 +34,6 @@ public class PaymentRepository {
                             updated_at = now()
                         where id = :id""")
                 .param("code", r.code().name()).param("text", r.detail()).param("id", id).update();
-    }
-
-    public void recordQuote(long id, FxQuote q) {
-        jdbc.sql("""
-                        update payment set target_currency = :tc, target_amount = :ta, settlement_amount = :sa,
-                            fx_quote_id = :qid, fx_source_rate = :sr, fx_target_rate = :tr, quote_expires_at = :exp
-                        where id = :id""")
-                .param("tc", q.targetCurrency()).param("ta", q.targetAmount()).param("sa", q.settlementAmount())
-                .param("qid", q.id()).param("sr", q.sourceRate()).param("tr", q.targetRate())
-                .param("exp", Timestamp.from(q.expiresAt())).param("id", id).update();
-    }
-
-    public void markAccepted(long id, long cycleId, Instant at) {
-        jdbc.sql("""
-                        update payment set state = 'ACCEPTED', cycle_id = :cycle, accepted_at = :at, updated_at = :at
-                        where id = :id""")
-                .param("cycle", cycleId).param("at", Timestamp.from(at)).param("id", id).update();
-    }
-
-    public void markQueued(long id, Instant at) {
-        jdbc.sql("update payment set state = 'QUEUED', queued_at = :at, updated_at = :at where id = :id")
-                .param("at", Timestamp.from(at)).param("id", id).update();
-    }
-
-    /** EndToEndId duplicate detection per debtor agent; false if already used by another UETR. */
-    public boolean claimEndToEnd(String debtorAgent, String endToEndId, UUID uetr) {
-        int inserted = jdbc.sql("""
-                        insert into end_to_end_ref (debtor_agent, end_to_end_id, uetr) values (:a, :e, :u)
-                        on conflict do nothing""")
-                .param("a", debtorAgent).param("e", endToEndId).param("u", uetr).update();
-        return inserted == 1;
     }
 
     public void insertEvents(List<Lifecycle.Event> events) {
