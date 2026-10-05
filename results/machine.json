@@ -1,0 +1,7 @@
+{
+  "date_utc": "2026-10-05",
+  "cpu": "Intel Core Processor (Broadwell, no TSX, IBRS)",
+  "vcpus": 8,
+  "rust": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "note": "Shared VPS. Gateway, generator, PostgreSQL and netting engine on one host. JVM/compiler and other existing workloads also running."
+}

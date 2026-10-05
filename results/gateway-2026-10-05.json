@@ -1,0 +1,133 @@
+{
+  "startedAt" : "2026-10-05T07:54:36.145531332Z",
+  "config" : {
+    "warmup" : 1000,
+    "seed" : 2026,
+    "concurrency" : 32,
+    "capScale" : 1.0,
+    "batch" : 16,
+    "mix" : {
+      "sme" : 0.25,
+      "retail" : 0.7
+    },
+    "payments" : 20000,
+    "cycles" : 4
+  },
+  "gateway" : {
+    "transactions" : 20000,
+    "messages" : 1252,
+    "sendingSeconds" : 12.01,
+    "throughputTxPerSec" : 1665.43,
+    "latencyMs" : {
+      "p50" : 267.26,
+      "p999" : 692.71,
+      "p99" : 580.13,
+      "p90" : 345.9,
+      "max" : 708.56
+    },
+    "statuses" : {
+      "ACSP" : 19933,
+      "PDNG" : 67
+    },
+    "httpErrors" : 0
+  },
+  "netting" : {
+    "paymentsNetted" : 20000,
+    "grossSettlementUsd" : 2.6298641697E8,
+    "netSettlementUsd" : 9.593301754E7,
+    "liquiditySavingPct" : 63.52,
+    "settlementTransfers" : 156,
+    "transferReductionPct" : 99.22,
+    "cycles" : [ {
+      "id" : 2,
+      "businessDate" : "2026-10-05",
+      "status" : "SETTLED",
+      "openedAt" : "2026-10-05T07:54:20.848702Z",
+      "closedAt" : "2026-10-05T07:54:24.999314Z",
+      "nettedAt" : "2026-10-05T07:54:25.125632Z",
+      "settledAt" : "2026-10-05T07:54:25.415238Z",
+      "paymentCount" : 5000,
+      "grossValue" : 6474956542,
+      "netValue" : 1989909320,
+      "transferCount" : 39,
+      "transferLowerBound" : 21,
+      "transfersOptimal" : false,
+      "planMethod" : "PAIRING_GREEDY",
+      "nettingMicros" : 909,
+      "nettingRoundTripMs" : 79,
+      "liquiditySavingPct" : 69.27,
+      "transferReductionPct" : 99.22,
+      "failureReason" : null,
+      "cutOffToSettledMs" : 671
+    }, {
+      "id" : 3,
+      "businessDate" : "2026-10-05",
+      "status" : "SETTLED",
+      "openedAt" : "2026-10-05T07:54:24.999314Z",
+      "closedAt" : "2026-10-05T07:54:28.423333Z",
+      "nettedAt" : "2026-10-05T07:54:28.509142Z",
+      "settledAt" : "2026-10-05T07:54:28.860736Z",
+      "paymentCount" : 4968,
+      "grossValue" : 6608620208,
+      "netValue" : 2278925247,
+      "transferCount" : 39,
+      "transferLowerBound" : 21,
+      "transfersOptimal" : false,
+      "planMethod" : "PAIRING_GREEDY",
+      "nettingMicros" : 1385,
+      "nettingRoundTripMs" : 52,
+      "liquiditySavingPct" : 65.52,
+      "transferReductionPct" : 99.21,
+      "failureReason" : null,
+      "cutOffToSettledMs" : 747
+    }, {
+      "id" : 4,
+      "businessDate" : "2026-10-05",
+      "status" : "SETTLED",
+      "openedAt" : "2026-10-05T07:54:28.423333Z",
+      "closedAt" : "2026-10-05T07:54:31.827401Z",
+      "nettedAt" : "2026-10-05T07:54:31.896802Z",
+      "settledAt" : "2026-10-05T07:54:32.154489Z",
+      "paymentCount" : 5032,
+      "grossValue" : 7092415864,
+      "netValue" : 3174956414,
+      "transferCount" : 39,
+      "transferLowerBound" : 22,
+      "transfersOptimal" : false,
+      "planMethod" : "PAIRING_GREEDY",
+      "nettingMicros" : 1154,
+      "nettingRoundTripMs" : 36,
+      "liquiditySavingPct" : 55.23,
+      "transferReductionPct" : 99.22,
+      "failureReason" : null,
+      "cutOffToSettledMs" : 626
+    }, {
+      "id" : 5,
+      "businessDate" : "2026-10-05",
+      "status" : "SETTLED",
+      "openedAt" : "2026-10-05T07:54:31.827401Z",
+      "closedAt" : "2026-10-05T07:54:35.462452Z",
+      "nettedAt" : "2026-10-05T07:54:35.513815Z",
+      "settledAt" : "2026-10-05T07:54:35.744431Z",
+      "paymentCount" : 5000,
+      "grossValue" : 6122649083,
+      "netValue" : 2149510773,
+      "transferCount" : 39,
+      "transferLowerBound" : 24,
+      "transfersOptimal" : false,
+      "planMethod" : "PAIRING_GREEDY",
+      "nettingMicros" : 692,
+      "nettingRoundTripMs" : 25,
+      "liquiditySavingPct" : 64.89,
+      "transferReductionPct" : 99.22,
+      "failureReason" : null,
+      "cutOffToSettledMs" : 608
+    } ]
+  },
+  "lsm" : {
+    "released" : 67,
+    "stillQueuedAtEnd" : 0,
+    "releasedByOffsetting" : 0
+  },
+  "wallSeconds" : 14.68
+}

@@ -120,6 +120,7 @@ public final class LoadGenerator {
         SplittableRandom rng = new SplittableRandom(seed);
         Stats total = new Stats();
         int perCycle = (int) Math.ceil(payments / (double) cycles);
+        Instant startedAt = Instant.now();
         long started = System.nanoTime();
         for (int c = 0; c < cycles; c++) {
             int n = Math.min(perCycle, payments - c * perCycle);
@@ -140,7 +141,8 @@ public final class LoadGenerator {
         JsonNode live = get("/api/dashboard").get("live");
 
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("startedAt", Instant.now().toString());
+        report.put("startedAt", startedAt.toString());
+        report.put("completedAt", Instant.now().toString());
         report.put("config", Map.of("payments", payments, "concurrency", concurrency, "batch", batch,
                 "cycles", cycles, "warmup", warmup, "seed", seed, "capScale", capScale, "mix", mix));
         Map<String, Object> gateway = new LinkedHashMap<>();
