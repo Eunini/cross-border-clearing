@@ -28,11 +28,11 @@
   h2 { font-size: 15px; margin: 0 0 12px; }
   .sub { color: var(--text-secondary); margin: 0 0 20px; }
   .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
-  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card { min-width: 0; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .tile .label { color: var(--text-secondary); font-size: 12px; }
   .tile .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .note { color: var(--text-muted); font-size: 12px; }
-  .row { display: grid; gap: 16px; grid-template-columns: 2fr 1fr; margin-bottom: 16px; }
+  .row { display: grid; gap: 16px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); margin-bottom: 16px; }
   @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th, td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
@@ -52,10 +52,14 @@
   .status { font-size: 12px; color: var(--text-secondary); }
   .scroll { max-height: 420px; overflow: auto; }
   .empty { color: var(--text-muted); padding: 24px 0; text-align: center; }
+  .demo-nav { margin: 0 0 16px; font-size: 13px; }
+  .demo-nav a { color: var(--text-primary); text-underline-offset: 3px; }
+  @media (max-width: 640px) { .viz-root { padding: 16px; } }
 </style>
 </head>
 <body>
 <div class="viz-root">
+  <p class="demo-nav"><a href="../">All demos</a> · <a href="https://github.com/Eunini/cross-border-clearing" target="_blank" rel="noopener">Source code</a></p>
   <h1>cross-border-clearing</h1>
   <p class="sub">Simulated clearing network: fictional participants, simulated FX rates. Values in <span id="ccy">USD</span>. Refreshes every 5 s.</p>
 

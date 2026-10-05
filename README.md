@@ -1,5 +1,7 @@
 # cross-border-clearing
 
+**[Open the live demo](https://leads.realalma.com/fintech/cross-border-clearing/)** · Inspect simulated cross-border settlement, currency positions, and liquidity savings. All data is synthetic.
+
 A cross-border instant payment clearing and multilateral netting network,
 built as a working simulation: an ISO 20022 gateway in Java (Spring Boot,
 PostgreSQL) and a netting and liquidity-saving engine in Rust.
