@@ -2,5 +2,7 @@
   "publicUrl": "https://leads.realalma.com/fintech/cross-border-clearing/",
   "verification": "docs/public-deployment-verification.json",
   "gatewaySource": "https://github.com/Eunini/quorum-ledger/tree/main/ops/portfolio-demo",
-  "data": "synthetic"
+  "data": "synthetic",
+  "applicationFeatures": "Submit cross-border ISO 20022 payments; track each status change; request FX quotes; manage liquidity queues; close settlement cycles; and download participant statements.",
+  "authentication": "Persistent accounts, secure session cookies, private workspaces, CSRF protection, and team roles"
 }

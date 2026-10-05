@@ -1,6 +1,6 @@
 # cross-border-clearing
 
-**[Open the live demo](https://leads.realalma.com/fintech/cross-border-clearing/)** · Inspect simulated cross-border settlement, currency positions, and liquidity savings. All data is synthetic.
+**[Open the application](https://leads.realalma.com/fintech/cross-border-clearing/)** · Submit cross-border ISO 20022 payments; track each status change; request FX quotes; manage liquidity queues; close settlement cycles; and download participant statements.
 
 A cross-border instant payment clearing and multilateral netting network,
 built as a working simulation: an ISO 20022 gateway in Java (Spring Boot,
@@ -15,7 +15,19 @@ connected to any real network.**
 
 ![Operations dashboard with live synthetic clearing results](docs/dashboard.png)
 
-[Recorded dashboard demo](docs/demo.webm)
+[Local clearing exercise recording](docs/demo.webm)
+
+## Use the application
+
+Create an account, sign in, or open a private workspace and save your account later. One account works across all four applications. Workspaces have persistent records, searchable tables, activity logs, and team invitations. Your saved data is retained when you reload or sign in from another device.
+
+Payment instructions are private to your workspace. The clearing network, participant positions, and aggregate settlement cycles are shared between operators.
+
+All funds, cards, institutions, and sample transactions are synthetic. The applications do not connect to real banking or card networks.
+
+[Application workflows and hosting details](docs/application.md)
+
+![Application workspace](docs/application.png)
 
 ## The problem
 
